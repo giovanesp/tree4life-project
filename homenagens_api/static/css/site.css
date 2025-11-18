@@ -1,0 +1,160 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body,
+html {
+    height: 100%;
+    width: 100%;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    overflow-x: hidden;
+}
+
+#map {
+    height: 100vh;
+    width: 100vw;
+    position: absolute;
+    z-index: 1;
+}
+
+header,
+footer {
+    background-color: rgba(4, 44, 77, 0.795);
+    color: #fdbc11;
+    text-align: center;
+    padding: 1em;
+    position: fixed;
+    width: 100%;
+    z-index: 2;
+    transition: background-color 0.5s ease;
+}
+
+header {
+    top: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+}
+
+footer {
+    bottom: 0;
+}
+
+header img {
+    width: 60px;
+    transition: transform 0.3s ease;
+}
+
+header img:hover {
+    transform: scale(1.1);
+}
+
+header div {
+    flex-grow: 1;
+    text-align: center;
+}
+
+header h1,
+header p {
+    margin: 0;
+    line-height: 1.2em;
+    font-size: 1em;
+}
+
+.footer-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    padding: 1px 5px;
+}
+
+.footer-copy {
+    flex: 1;
+    text-align: left;
+    font-size: 0.9em;
+    padding-right: 5px;
+}
+
+.partners {
+    flex: 1;
+    text-align: right;
+}
+
+.partners ul {
+    list-style: none;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.partners li {
+    margin: 3px;
+    padding: 3px;
+    background-color: rgba(255, 255, 255, 0.8);
+    border-radius: 5px;
+    box-shadow: 0 0 3px rgba(0, 0, 0, 0.1);
+    color: #00457c;
+    text-align: center;
+    font-size: 0.9em;
+    transition: transform 0.3s ease;
+}
+
+.partners li:hover {
+    transform: scale(1.05);
+}
+
+.popup-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.leaflet-popup-open .popup-content {
+    opacity: 1;
+}
+
+.popup-content img {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    margin-bottom: 5px;
+}
+
+/* Media Queries for Responsive Design */
+@media (max-width: 600px) {
+
+    header,
+    footer {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .footer-container {
+        flex-direction: column;
+    }
+
+    .partners ul {
+        justify-content: center;
+    }
+
+    header h1,
+    header p {
+        font-size: 0.9em;
+    }
+
+    footer .footer-copy,
+    .partners ul {
+        font-size: 0.8em;
+        text-align: center;
+    }
+
+    .footer-copy,
+    .partners {
+        padding: 5px 0;
+    }
+}

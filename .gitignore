@@ -1,0 +1,24 @@
+# Diretórios da Virtual Environment
+/venv
+/.venv
+
+# Arquivos de Banco de Dados
+*.sqlite3
+/db.sqlite3
+
+# Arquivos de Mídia e Estáticos Coletados
+/media/
+/staticfiles/
+
+# Arquivos de Configuração de Segurança (Se não for usar variáveis de ambiente)
+# Se você tiver um arquivo de secrets.py, adicione-o aqui!
+# secrets.py 
+
+# Arquivos de Cache e Pyc
+__pycache__/
+*.pyc
+*~
+.DS_Store
+
+# Logs
+*.log
