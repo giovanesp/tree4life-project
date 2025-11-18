@@ -78,10 +78,10 @@ WSGI_APPLICATION = 'tree4life_project.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql', 
-        'NAME': 'tree4life',
-        'USER': 'root',
-        'PASSWORD': 'klr258',
-        'HOST': 'localhost',
+        'NAME': 't4lproject',
+        'USER': 'kingdb',
+        'PASSWORD': 'kingDB2k!',
+        'HOST': 'lcasistemas.vps-kinghost.net',
         'PORT': '3306',
     }
 }
