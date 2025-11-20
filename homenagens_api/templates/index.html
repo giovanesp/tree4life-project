@@ -10,8 +10,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{% static 'css/site.css' %}">
 
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script async defer
+        src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDflOnnUrodPRcJfMXQHulDLGH9QVetdpI&callback=initMap"></script>
 
     <style>
         .modal {
@@ -80,6 +80,18 @@
 
         #homenagemForm button[type="button"] {
             background-color: #6c757d;
+        }
+
+        .popup-content {
+            font-family: 'Poppins', sans-serif;
+            text-align: center;
+            max-width: 150px;
+        }
+
+        .popup-content img {
+            border-radius: 50%;
+            object-fit: cover;
+            margin-bottom: 5px;
         }
     </style>
 </head>
@@ -177,31 +189,30 @@
         const initialLat = -13.0984;
         const initialLng = -55.9022;
         const initialZoom = 12;
+        const DEFAULT_BABY_IMAGE_URL = "{% static 'images/baby.png' %}";
 
         let map;
-        let currentMarkers;
-        let treeIcon;
+        let currentMarkers = [];
         let watchId;
         let isManualOverride = false;
         let speciesIdFromUrl = null;
+        let infoWindow;
 
-        function initMap() {
-            map = L.map('map').setView([initialLat, initialLng], initialZoom);
+        window.initMap = function () {
+            const center = { lat: initialLat, lng: initialLng };
 
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '&copy; OpenStreetMap contributors'
-            }).addTo(map);
-
-            map.whenReady(() => {
-                currentMarkers = L.layerGroup().addTo(map);
-                treeIcon = L.icon({
-                    iconUrl: '{% static "images/740938.png" %}',
-                    iconSize: [32, 32],
-                    iconAnchor: [16, 32],
-                    popupAnchor: [0, -32]
-                });
-                loadHomenagens();
+            map = new google.maps.Map(document.getElementById('map'), {
+                center: center,
+                zoom: initialZoom,
+                mapTypeId: google.maps.MapTypeId.HYBRID,
+                mapTypeControl: true,
+                streetViewControl: false,
+                fullscreenControl: false,
             });
+
+            infoWindow = new google.maps.InfoWindow();
+
+            loadHomenagens();
         }
 
         async function loadHomenagens() {
@@ -219,30 +230,70 @@
         }
 
         function renderMarkers(homenagens) {
-            if (!currentMarkers) return;
-            currentMarkers.clearLayers();
+            const formatarDataBr = (dataString) => {
+                if (!dataString) return 'Data não informada';
+                const partes = dataString.split('-');
+                if (partes.length === 3) {
+                    return `${partes[2]}/${partes[1]}/${partes[0]}`;
+                }
+                return dataString;
+            };
+
+            currentMarkers.forEach(marker => marker.setMap(null));
+            currentMarkers = [];
+
+            let bounds = new google.maps.LatLngBounds();
 
             homenagens.forEach(function (homenagem) {
                 if (homenagem.coordenadas && homenagem.coordenadas.length === 2) {
-                    const fotoUrl = `${homenagem.foto}`;
-                    const marker = L.marker(homenagem.coordenadas, { icon: treeIcon })
-                        .bindPopup(`
-                            <div class="popup-content">
-                                <img src="${fotoUrl}" alt="Foto de ${homenagem.nome || 'Homenageado'}" style="max-width: 60px; height: auto;">
-                                <h3>${homenagem.nome || 'Homenagem Sem Nome'}</h3>
-                                <p>Espécie: ${homenagem.especie_nome}<br /> 
-                                Plantio: ${homenagem.dataPlantio}</p>
-                            </div>
-                        `);
-                    currentMarkers.addLayer(marker);
+                    const lat = homenagem.coordenadas[0];
+                    const lng = homenagem.coordenadas[1];
+                    const position = { lat: lat, lng: lng };
+                    const fotoParaExibir = (homenagem.foto && homenagem.foto.trim() !== '')
+                        ? `${homenagem.foto}`
+                        : DEFAULT_BABY_IMAGE_URL;
+                    const dataPlantioFormatada = formatarDataBr(homenagem.dataPlantio);
+
+                    const treeIcon = {
+                        url: '{% static "images/740938.png" %}',
+                        scaledSize: new google.maps.Size(32, 32),
+                        origin: new google.maps.Point(0, 0),
+                        anchor: new google.maps.Point(16, 32)
+                    };
+
+                    const marker = new google.maps.Marker({
+                        position: position,
+                        map: map,
+                        icon: treeIcon,
+                        title: homenagem.nome || 'Homenagem Sem Nome'
+                    });
+
+                    // Conteúdo do InfoWindow
+                    const contentString = `
+                        <div class="popup-content">
+                            <img src="${fotoParaExibir}" alt="Foto de ${homenagem.nome || 'Homenageado'}" style="max-width: 60px; height: 60px;">
+                            <h3>${homenagem.nome || 'Homenagem Sem Nome'}</h3>
+                            <p>Espécie: ${homenagem.especie_nome}<br /> 
+                            Plantio: ${dataPlantioFormatada}</p>
+                        </div>
+                    `;
+
+                    // Listener para abrir o InfoWindow
+                    marker.addListener('click', () => {
+                        infoWindow.setContent(contentString);
+                        infoWindow.open(map, marker);
+                    });
+
+                    currentMarkers.push(marker);
+                    bounds.extend(position);
                 }
             });
 
-            if (currentMarkers.getLayers().length > 0) {
-                const bounds = currentMarkers.getBounds();
-                map.fitBounds(bounds, { padding: [50, 50] });
+            if (currentMarkers.length > 0) {
+                map.fitBounds(bounds);
             } else {
-                map.setView([initialLat, initialLng], initialZoom);
+                map.setCenter({ lat: initialLat, lng: initialLng });
+                map.setZoom(initialZoom);
             }
         }
 
@@ -425,7 +476,7 @@
         }
 
         document.addEventListener('DOMContentLoaded', () => {
-            initMap();
+            // initMap() é chamado pela API do Google Maps após o carregamento
             setupManualToggle();
 
             checkUrlParams();
