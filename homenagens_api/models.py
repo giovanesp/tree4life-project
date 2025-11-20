@@ -37,7 +37,6 @@ class Homenagem(models.Model):
     
     foto = models.ImageField(upload_to='uploads/', blank=True, null=True)
     
-    # NOVOS CAMPOS PARA COORDENADAS
     latitude = models.FloatField(null=True, blank=True)
     longitude = models.FloatField(null=True, blank=True) 
 
@@ -45,4 +44,4 @@ class Homenagem(models.Model):
         db_table = 'Homenagens' 
 
     def __str__(self):
-        return self.nome
+        return self.nome or f"Homenagem - Código: {self.codigo}"
