@@ -128,6 +128,7 @@
             <p>Preencha os dados. A localização é preenchida automaticamente, mas pode ser ajustada.</p>
 
             <form id="homenagemForm">
+                {% csrf_token %}
 
                 <label for="nome">Nome do Homenageado:</label>
                 <input type="text" id="nome" name="nome">
@@ -172,7 +173,6 @@
     </div>
 
     <script>
-        // ⚠️ CORRIGIDO PARA O ENDEREÇO DE PRODUÇÃO COM HTTPS
         const API_BASE_URL = 'https://tree4life.lcasistemas.com.br';
         const initialLat = -13.0984;
         const initialLng = -55.9022;
@@ -183,6 +183,7 @@
         let treeIcon;
         let watchId;
         let isManualOverride = false;
+        let speciesIdFromUrl = null;
 
         function initMap() {
             map = L.map('map').setView([initialLat, initialLng], initialZoom);
@@ -311,9 +312,10 @@
             });
         }
 
-        async function loadSpeciesForForm() {
+        async function loadSpeciesForForm(defaultSpeciesId = null) {
             const select = document.getElementById('especie_id');
             const url = `${API_BASE_URL}/api/especies/`;
+            select.disabled = true;
 
             try {
                 const response = await fetch(url);
@@ -324,7 +326,6 @@
 
                 if (especies.length === 0) {
                     select.innerHTML = '<option value="">Nenhuma espécie cadastrada no Admin</option>';
-                    select.disabled = true;
                     return;
                 }
 
@@ -335,10 +336,16 @@
                     select.appendChild(option);
                 });
 
+                const idToSelect = defaultSpeciesId || speciesIdFromUrl;
+                if (idToSelect) {
+                    select.value = idToSelect;
+                    speciesIdFromUrl = null;
+                }
+                select.disabled = false;
+
             } catch (error) {
                 console.error("Erro ao carregar espécies:", error);
                 select.innerHTML = '<option value="">Erro ao carregar espécies</option>';
-                select.disabled = true;
             }
         }
 
@@ -361,13 +368,19 @@
             for (const [urlParam, formId] of Object.entries(paramMap)) {
                 if (params.has(urlParam)) {
                     const value = params.get(urlParam);
-                    const input = document.getElementById(formId);
-                    if (input) {
-                        input.value = value;
-                        paramsFound = true;
-                        if (urlParam === 'lat' || urlParam === 'lng') {
-                            coordsPreFilled = true;
+
+                    if (urlParam === 'especie') {
+                        speciesIdFromUrl = value;
+                    } else {
+                        const input = document.getElementById(formId);
+                        if (input) {
+                            input.value = value;
                         }
+                    }
+
+                    paramsFound = true;
+                    if (urlParam === 'lat' || urlParam === 'lng') {
+                        coordsPreFilled = true;
                     }
                 }
             }
@@ -381,21 +394,22 @@
                     document.getElementById('toggle_edit_coords').textContent = "Bloquear Edição (Voltar ao GPS)";
                 }
 
-                window.openCadastroModal(false); // Abre o modal sem resetar o formulário
+                window.openCadastroModal(false, speciesIdFromUrl);
             }
         }
 
-        window.openCadastroModal = function (resetForm = true) {
+        window.openCadastroModal = function (resetForm = true, defaultSpeciesId = null) {
             const modal = document.getElementById('cadastroModal');
 
             if (modal.style.display !== 'block') {
                 modal.style.display = 'block';
-                loadSpeciesForForm();
+
+                loadSpeciesForForm(defaultSpeciesId);
+
                 startLocationWatch();
                 document.getElementById('status-message').textContent = '';
             }
 
-            // Reseta o formulário apenas se não estivermos pré-preenchendo pela URL
             if (resetForm) {
                 document.getElementById('homenagemForm').reset();
                 isManualOverride = false;
@@ -407,7 +421,7 @@
 
         window.closeCadastroModal = function () {
             document.getElementById('cadastroModal').style.display = 'none';
-            stopLocationWatch(); // Para de monitorar o GPS ao fechar
+            stopLocationWatch();
         }
 
         document.addEventListener('DOMContentLoaded', () => {
@@ -435,7 +449,6 @@
                         return;
                     }
 
-
                     try {
                         const formData = new FormData(form);
 
@@ -449,7 +462,6 @@
                             let errorMessage = 'Falha no cadastro. Verifique os dados.';
 
                             if (errorData) {
-                                // Tenta mostrar erros específicos do Django
                                 const detailedErrors = Object.keys(errorData).map(key => `${key}: ${errorData[key]}`).join('; ');
                                 errorMessage = `Falha no cadastro: ${detailedErrors}`;
                             }
@@ -457,9 +469,6 @@
                         }
 
                         statusMessage.textContent = "✅ Homenagem cadastrada com sucesso! Recarregando mapa...";
-
-                        // Não reseta o formulário se o cadastro for parcial, para não perder dados que foram digitados
-                        // form.reset(); 
 
                         closeCadastroModal();
                         await loadHomenagens();
