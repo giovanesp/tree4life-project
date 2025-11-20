@@ -17,6 +17,11 @@ class HomenagemSerializer(serializers.ModelSerializer):
             'codigo', 'nome', 'dataNascimento', 'dataPlantio', 
             'especie_nome', 'especie_id', 'foto', 'latitude', 'longitude', 'coordenadas'
         )
+        extra_kwargs = {
+            'nome': {'required': False, 'allow_blank': True},
+            'dataNascimento': {'required': False},
+            'foto': {'required': False}
+        }
 
     def get_coordenadas(self, obj):
         if obj.latitude is not None and obj.longitude is not None:

@@ -30,12 +30,12 @@ class Homenagem(models.Model):
         default=generate_unique_code, 
         blank=True
     )
-    nome = models.CharField(max_length=255)
-    dataNascimento = models.DateField()
+    nome = models.CharField(max_length=255, blank=True, null=True)
+    dataNascimento = models.DateField(blank=True, null=True)
     dataPlantio = models.DateField()
     especie = models.ForeignKey(Especie, on_delete=models.PROTECT, related_name='homenagens')
     
-    foto = models.ImageField(upload_to='uploads/')
+    foto = models.ImageField(upload_to='uploads/', blank=True, null=True)
     
     # NOVOS CAMPOS PARA COORDENADAS
     latitude = models.FloatField(null=True, blank=True)
