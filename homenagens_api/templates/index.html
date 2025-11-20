@@ -130,10 +130,10 @@
             <form id="homenagemForm">
 
                 <label for="nome">Nome do Homenageado:</label>
-                <input type="text" id="nome" name="nome" required>
+                <input type="text" id="nome" name="nome">
 
                 <label for="dataNascimento">Data de Nascimento:</label>
-                <input type="date" id="dataNascimento" name="dataNascimento" required>
+                <input type="date" id="dataNascimento" name="dataNascimento">
 
                 <label for="dataPlantio">Data do Plantio:</label>
                 <input type="date" id="dataPlantio" name="dataPlantio" required>
@@ -144,7 +144,7 @@
                 </select>
 
                 <label for="foto_file">Foto do Homenageado (Anexar ou Câmera):</label>
-                <input type="file" id="foto_file" name="foto" accept="image/*" capture="environment" required>
+                <input type="file" id="foto_file" name="foto" accept="image/*" capture="environment">
 
                 <label for="latitude_input">Latitude:</label>
                 <input type="text" id="latitude_input" name="latitude" placeholder="Aguardando GPS..." readonly
@@ -172,6 +172,7 @@
     </div>
 
     <script>
+        // ⚠️ CORRIGIDO PARA O ENDEREÇO DE PRODUÇÃO COM HTTPS
         const API_BASE_URL = 'https://tree4life.lcasistemas.com.br';
         const initialLat = -13.0984;
         const initialLng = -55.9022;
@@ -226,8 +227,8 @@
                     const marker = L.marker(homenagem.coordenadas, { icon: treeIcon })
                         .bindPopup(`
                             <div class="popup-content">
-                                <img src="${fotoUrl}" alt="Foto de ${homenagem.nome}" style="max-width: 60px; height: auto;">
-                                <h3>${homenagem.nome}</h3>
+                                <img src="${fotoUrl}" alt="Foto de ${homenagem.nome || 'Homenageado'}" style="max-width: 60px; height: auto;">
+                                <h3>${homenagem.nome || 'Homenagem Sem Nome'}</h3>
                                 <p>Espécie: ${homenagem.especie_nome}<br /> 
                                 Plantio: ${homenagem.dataPlantio}</p>
                             </div>
@@ -341,19 +342,67 @@
             }
         }
 
-        window.openCadastroModal = function () {
-            document.getElementById('cadastroModal').style.display = 'block';
-            loadSpeciesForForm();
-            startLocationWatch();
+        function checkUrlParams() {
+            const params = new URLSearchParams(window.location.search);
+            const form = document.getElementById('homenagemForm');
 
-            // Reseta o estado do GPS para auto ao abrir o modal
-            isManualOverride = false;
-            document.getElementById('latitude_input').readOnly = true;
-            document.getElementById('longitude_input').readOnly = true;
-            document.getElementById('toggle_edit_coords').textContent = "Permitir Edição Manual";
+            const paramMap = {
+                'plantio': 'dataPlantio',
+                'especie': 'especie_id',
+                'lat': 'latitude_input',
+                'lng': 'longitude_input',
+                'nome': 'nome',
+                'nascimento': 'dataNascimento'
+            };
 
-            document.getElementById('homenagemForm').reset();
-            document.getElementById('status-message').textContent = '';
+            let paramsFound = false;
+            let coordsPreFilled = false;
+
+            for (const [urlParam, formId] of Object.entries(paramMap)) {
+                if (params.has(urlParam)) {
+                    const value = params.get(urlParam);
+                    const input = document.getElementById(formId);
+                    if (input) {
+                        input.value = value;
+                        paramsFound = true;
+                        if (urlParam === 'lat' || urlParam === 'lng') {
+                            coordsPreFilled = true;
+                        }
+                    }
+                }
+            }
+
+            if (paramsFound) {
+                if (coordsPreFilled) {
+                    isManualOverride = true;
+                    document.getElementById('latitude_input').readOnly = false;
+                    document.getElementById('longitude_input').readOnly = false;
+                    document.getElementById('gps_status').textContent = "Status: Localização pré-preenchida via URL.";
+                    document.getElementById('toggle_edit_coords').textContent = "Bloquear Edição (Voltar ao GPS)";
+                }
+
+                window.openCadastroModal(false); // Abre o modal sem resetar o formulário
+            }
+        }
+
+        window.openCadastroModal = function (resetForm = true) {
+            const modal = document.getElementById('cadastroModal');
+
+            if (modal.style.display !== 'block') {
+                modal.style.display = 'block';
+                loadSpeciesForForm();
+                startLocationWatch();
+                document.getElementById('status-message').textContent = '';
+            }
+
+            // Reseta o formulário apenas se não estivermos pré-preenchendo pela URL
+            if (resetForm) {
+                document.getElementById('homenagemForm').reset();
+                isManualOverride = false;
+                document.getElementById('latitude_input').readOnly = true;
+                document.getElementById('longitude_input').readOnly = true;
+                document.getElementById('toggle_edit_coords').textContent = "Permitir Edição Manual";
+            }
         }
 
         window.closeCadastroModal = function () {
@@ -365,6 +414,8 @@
             initMap();
             setupManualToggle();
 
+            checkUrlParams();
+
             const form = document.getElementById('homenagemForm');
             if (form) {
                 form.addEventListener('submit', async (e) => {
@@ -373,11 +424,17 @@
                     statusMessage.style.color = 'black';
                     statusMessage.textContent = "Enviando dados...";
 
-                    if (isManualOverride) {
-                        statusMessage.textContent = "Enviando dados com localização manual...";
-                    } else {
-                        statusMessage.textContent = "Enviando dados com localização GPS...";
+                    const dataPlantio = document.getElementById('dataPlantio').value;
+                    const especie_id = document.getElementById('especie_id').value;
+                    const latitude = document.getElementById('latitude_input').value;
+                    const longitude = document.getElementById('longitude_input').value;
+
+                    if (!dataPlantio || !especie_id || !latitude || !longitude) {
+                        statusMessage.textContent = "❌ Erro: Data do Plantio, Espécie e Coordenadas são obrigatórios para a árvore.";
+                        statusMessage.style.color = 'red';
+                        return;
                     }
+
 
                     try {
                         const formData = new FormData(form);
@@ -389,16 +446,21 @@
 
                         if (!response.ok) {
                             const errorData = await response.json();
-                            let errorMessage = 'Falha no cadastro. Verifique os dados: ';
+                            let errorMessage = 'Falha no cadastro. Verifique os dados.';
 
                             if (errorData) {
-                                errorMessage += JSON.stringify(errorData, null, 2);
+                                // Tenta mostrar erros específicos do Django
+                                const detailedErrors = Object.keys(errorData).map(key => `${key}: ${errorData[key]}`).join('; ');
+                                errorMessage = `Falha no cadastro: ${detailedErrors}`;
                             }
                             throw new Error(errorMessage);
                         }
 
                         statusMessage.textContent = "✅ Homenagem cadastrada com sucesso! Recarregando mapa...";
-                        form.reset();
+
+                        // Não reseta o formulário se o cadastro for parcial, para não perder dados que foram digitados
+                        // form.reset(); 
+
                         closeCadastroModal();
                         await loadHomenagens();
 
