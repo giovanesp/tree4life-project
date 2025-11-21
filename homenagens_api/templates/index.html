@@ -177,6 +177,7 @@
                 </button>
                 <p id="gps_status" style="font-size: 0.9em; color: #007bff; margin-top: 5px;">Status: Inicializando
                     GPS...</p>
+                <input type="hidden" id="em_massa">
 
                 <button type="submit">Cadastrar</button>
                 <button type="button" onclick="closeCadastroModal()" style="background-color: #6c757d;">
@@ -453,7 +454,8 @@
                 'lat': 'latitude_input',
                 'lng': 'longitude_input',
                 'nome': 'nome',
-                'nascimento': 'dataNascimento'
+                'nascimento': 'dataNascimento',
+                'massa': 'em_massa'
             };
 
             let paramsFound = false;
@@ -509,6 +511,7 @@
             }
 
             if (clickPos) {
+                checkUrlParams();
                 stopLocationWatch();
                 isManualOverride = true;
 
@@ -585,7 +588,9 @@
                         statusMessage.textContent = "Homenagem cadastrada com sucesso! Recarregando mapa...";
 
                         closeCadastroModal();
-                        await loadHomenagens();
+                        if (document.getElementById('em_massa').value != 'true') {
+                            await loadHomenagens();
+                        }
 
                     } catch (error) {
                         console.error("Erro no envio:", error);
