@@ -9,6 +9,7 @@
 # Arquivos de Mídia e Estáticos Coletados
 /media/
 /staticfiles/
+/logs/
 
 # Arquivos de Configuração de Segurança (Se não for usar variáveis de ambiente)
 # Se você tiver um arquivo de secrets.py, adicione-o aqui!
