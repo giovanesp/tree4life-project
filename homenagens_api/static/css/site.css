@@ -95,13 +95,15 @@ header p {
 .partners li {
     margin: 3px;
     padding: 3px;
-    background-color: rgba(255, 255, 255, 0.8);
+    background-color: #ffffff;
     border-radius: 5px;
-    box-shadow: 0 0 3px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 0 3px rgba(255, 255, 255, 0.1);
     color: #00457c;
-    text-align: center;
     font-size: 0.9em;
     transition: transform 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
 }
 
 .partners li:hover {

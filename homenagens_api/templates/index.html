@@ -5,7 +5,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Uma Árvore, uma Vida | Tree4Life</title>
+    <title>Uma Vida, Uma Árvore | Tree4Life</title>
 
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{% static 'css/site.css' %}">
@@ -99,8 +99,8 @@
 <body>
     <header>
         <div>
-            <h1>Projeto Uma Árvore, uma Vida</h1>
-            <p>Nasce uma Vida, Plante uma árvore, assim vamos mudar o mundo!</p>
+            <h1>Projeto Uma Vida, Uma Árvore</h1>
+            <p>Um legado para as próximas gerações</p>
             <button type="button" onclick="openCadastroModal()">
                 Cadastrar Nova
             </button>
@@ -114,19 +114,22 @@
     <footer>
         <div class="footer-container">
             <div class="footer-copy">
-                <p>© 2025 Projeto Uma Árvore, uma Vida. <br>Todos os direitos reservados.</p>
+                <p>© 2025 Projeto Uma Vida, Uma Árvore. <br>Todos os direitos reservados.</p>
             </div>
             <div class="partners">
                 <ul>
                     <li>
+                        <img src="{% static 'images/logo_site_topo.png' %}" alt="Logo do Projeto"
+                            title="Projeto Uma Vida, Uma Árvore" height="60">
+                    </li>
+                    <li>
                         <img src="{% static 'images/rotary.svg' %}" alt="Logo do Rotary International"
-                            title="Um Projeto do Rotary Club de Lucas do rio Verde-MT" height="50">
+                            title="Um Projeto do Rotary Club de Lucas do rio Verde-MT" height="60">
                     </li>
                     <li>
                         <img src="{% static 'images/Lugitech_bg.png' %}" alt="Lugitech"
-                            title="Lugitech Inovações Tecnológicas" height="45">
+                            title="Lugitech Inovações Tecnológicas" height="60">
                     </li>
-                    <li>Patrocinador 1</li>
                     <li>Patrocinador 2</li>
                 </ul>
             </div>
@@ -197,6 +200,7 @@
         let isManualOverride = false;
         let speciesIdFromUrl = null;
         let infoWindow;
+        let userLocationMarker = null;
 
         window.initMap = function () {
             const center = { lat: initialLat, lng: initialLng };
@@ -211,6 +215,11 @@
             });
 
             infoWindow = new google.maps.InfoWindow();
+
+            // ADICIONADO: Listener para abrir o modal no ponto clicado
+            map.addListener('click', (event) => {
+                openCadastroModal(true, null, event.latLng);
+            });
 
             loadHomenagens();
         }
@@ -268,17 +277,15 @@
                         title: homenagem.nome || 'Homenagem Sem Nome'
                     });
 
-                    // Conteúdo do InfoWindow
                     const contentString = `
-                        <div class="popup-content">
-                            <img src="${fotoParaExibir}" alt="Foto de ${homenagem.nome || 'Homenageado'}" style="max-width: 60px; height: 60px;">
-                            <h3>${homenagem.nome || 'Homenagem Sem Nome'}</h3>
-                            <p>Espécie: ${homenagem.especie_nome}<br /> 
-                            Plantio: ${dataPlantioFormatada}</p>
-                        </div>
-                    `;
+                    <div class="popup-content">
+                        <img src="${fotoParaExibir}" alt="Foto de ${homenagem.nome || 'Homenageado'}" style="max-width: 60px; height: 60px;">
+                        <h3>${homenagem.nome || 'Homenagem Sem Nome'}</h3>
+                        <p>Espécie: ${homenagem.especie_nome}<br /> 
+                        Plantio: ${dataPlantioFormatada}</p>
+                    </div>
+                `;
 
-                    // Listener para abrir o InfoWindow
                     marker.addListener('click', () => {
                         infoWindow.setContent(contentString);
                         infoWindow.open(map, marker);
@@ -313,17 +320,48 @@
 
             const success = (position) => {
                 const { latitude, longitude, accuracy } = position.coords;
+                const newLatLng = new google.maps.LatLng(latitude, longitude);
 
                 if (!isManualOverride) {
                     latInput.value = latitude.toFixed(6);
                     lngInput.value = longitude.toFixed(6);
                     gpsStatus.textContent = `Status: Localização atualizada. Precisão: ±${accuracy.toFixed(1)}m`;
+
+                    // 1. Atualiza/Cria o Marcador do Usuário
+                    if (userLocationMarker) {
+                        userLocationMarker.setPosition(newLatLng);
+                    } else {
+                        userLocationMarker = new google.maps.Marker({
+                            position: newLatLng,
+                            map: map,
+                            title: 'Sua Posição Atual',
+                            icon: {
+                                path: google.maps.SymbolPath.CIRCLE,
+                                fillColor: '#4285F4',
+                                fillOpacity: 1.0,
+                                strokeColor: '#FFFFFF',
+                                strokeWeight: 2,
+                                scale: 8
+                            }
+                        });
+                    }
+
+                    // 2. Move e Zoom no Mapa
+                    map.setCenter(newLatLng);
+
+                    if (map.getZoom() < 17) {
+                        map.setZoom(17);
+                    }
                 }
             };
 
             const error = (err) => {
                 gpsStatus.textContent = `Status: ERRO GPS (${err.code}). Insira manualmente se necessário.`;
                 console.error(`ERRO GPS: ${err.message}`);
+                if (userLocationMarker) {
+                    userLocationMarker.setMap(null);
+                    userLocationMarker = null;
+                }
             };
 
             watchId = navigator.geolocation.watchPosition(success, error, {
@@ -337,6 +375,10 @@
             if (watchId) {
                 navigator.geolocation.clearWatch(watchId);
                 watchId = null;
+            }
+            if (userLocationMarker) {
+                userLocationMarker.setMap(null);
+                userLocationMarker = null;
             }
         }
 
@@ -449,24 +491,45 @@
             }
         }
 
-        window.openCadastroModal = function (resetForm = true, defaultSpeciesId = null) {
+        window.openCadastroModal = function (resetForm = true, defaultSpeciesId = null, clickPos = null) {
             const modal = document.getElementById('cadastroModal');
+            const latInput = document.getElementById('latitude_input');
+            const lngInput = document.getElementById('longitude_input');
+
+
+            if (resetForm) {
+                document.getElementById('homenagemForm').reset();
+                isManualOverride = false;
+                latInput.readOnly = true;
+                lngInput.readOnly = true;
+                document.getElementById('toggle_edit_coords').textContent = "Permitir Edição Manual";
+                startLocationWatch();
+                document.getElementById('gps_status').textContent = "Status: Tentando obter a localização...";
+            }
+
+            if (clickPos) {
+                stopLocationWatch();
+                isManualOverride = true;
+
+                latInput.value = clickPos.lat().toFixed(6);
+                lngInput.value = clickPos.lng().toFixed(6);
+
+                latInput.readOnly = false;
+                lngInput.readOnly = false;
+                document.getElementById('toggle_edit_coords').textContent = "Bloquear Edição (Voltar ao GPS)";
+                document.getElementById('gps_status').textContent = "Status: Localização escolhida no mapa.";
+            }
 
             if (modal.style.display !== 'block') {
                 modal.style.display = 'block';
 
                 loadSpeciesForForm(defaultSpeciesId);
 
-                startLocationWatch();
-                document.getElementById('status-message').textContent = '';
-            }
+                if (!clickPos && !resetForm) {
+                    startLocationWatch();
+                }
 
-            if (resetForm) {
-                document.getElementById('homenagemForm').reset();
-                isManualOverride = false;
-                document.getElementById('latitude_input').readOnly = true;
-                document.getElementById('longitude_input').readOnly = true;
-                document.getElementById('toggle_edit_coords').textContent = "Permitir Edição Manual";
+                document.getElementById('status-message').textContent = '';
             }
         }
 
@@ -476,7 +539,6 @@
         }
 
         document.addEventListener('DOMContentLoaded', () => {
-            // initMap() é chamado pela API do Google Maps após o carregamento
             setupManualToggle();
 
             checkUrlParams();
@@ -495,7 +557,7 @@
                     const longitude = document.getElementById('longitude_input').value;
 
                     if (!dataPlantio || !especie_id || !latitude || !longitude) {
-                        statusMessage.textContent = "❌ Erro: Data do Plantio, Espécie e Coordenadas são obrigatórios para a árvore.";
+                        statusMessage.textContent = "Erro: Data do Plantio, Espécie e Coordenadas são obrigatórios para a árvore.";
                         statusMessage.style.color = 'red';
                         return;
                     }
@@ -519,14 +581,14 @@
                             throw new Error(errorMessage);
                         }
 
-                        statusMessage.textContent = "✅ Homenagem cadastrada com sucesso! Recarregando mapa...";
+                        statusMessage.textContent = "Homenagem cadastrada com sucesso! Recarregando mapa...";
 
                         closeCadastroModal();
                         await loadHomenagens();
 
                     } catch (error) {
                         console.error("Erro no envio:", error);
-                        statusMessage.textContent = `❌ Erro no cadastro: ${error.message || error}`;
+                        statusMessage.textContent = `Erro no cadastro: ${error.message || error}`;
                         statusMessage.style.color = 'red';
                     }
                 });
