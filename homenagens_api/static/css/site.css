@@ -165,7 +165,7 @@ header p {
     }
 
     .partners li img {
-        max-width: 40px;
+        max-width: 40px !important;
         height: auto;
     }
 }
