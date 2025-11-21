@@ -159,4 +159,13 @@ header p {
     .partners {
         padding: 5px 0;
     }
+
+    .partners ul {
+        justify-content: center;
+    }
+
+    .partners li img {
+        max-width: 40px;
+        height: auto;
+    }
 }
