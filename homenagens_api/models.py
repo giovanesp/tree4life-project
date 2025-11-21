@@ -1,3 +1,6 @@
+from io import BytesIO
+from PIL import Image
+from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.db import models
 from django.contrib.auth.models import User
 import uuid
@@ -45,3 +48,24 @@ class Homenagem(models.Model):
 
     def __str__(self):
         return self.nome or f"Homenagem - Código: {self.codigo}"
+    
+    def save(self, *args, **kwargs):
+        if self.foto and self.foto.file and hasattr(self.foto.file, 'chunks'):
+            
+            img = Image.open(self.foto)
+            
+            output = BytesIO()
+            
+            img.save(output, format='JPEG', quality=70)
+            
+            novo_nome = self.foto.name.split('.')[0] + '.jpeg'
+            self.foto = InMemoryUploadedFile(
+                output,
+                'ImageField',
+                novo_nome,
+                'image/jpeg',
+                output.tell(),
+                None
+            )
+
+        super().save(*args, **kwargs)
